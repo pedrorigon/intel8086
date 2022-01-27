@@ -1,0 +1,1215 @@
+
+;
+;====================================================================
+;	- Desenvolver um programa capaz de ler um arquivo 
+;em formato texto (arquivo de entrada),processar os dados
+;lidos e, ao final, escrever um arquivo com os resultados
+;obtidos (arquivo de saída).
+;
+;	- Depois de lidos os números, o programa deverá calcular
+;o dígito verificador de cada número, a soma dos valores e a
+;média aritmética dos mesmos
+;
+;	- os valores lidos e calculados deverão ser escritos no
+;arquivo de saída.
+;
+;====================================================================
+;
+;
+	.model		small
+	.stack
+		
+CR		equ		0dh
+LF		equ		0ah
+
+	.data
+FileNameSrc		db		256 dup (?)		; Nome do arquivo a ser lido
+FileNameDst		db		256 dup (?)		; Nome do arquivo a ser escrito
+FileHandleSrc	dw		0				; Handler do arquivo origem
+FileHandleDst	dw		0				; Handler do arquivo destino
+FileBuffer		db		10 dup (?)		; Buffer de leitura/escrita do arquivo
+Bufferlinhaint 	db		10 dup (0) 	; Buffer linha
+Bufferlinhafrac 	db		10 dup (0) 	; Buffer linha
+Bufferfimint	dw		100 dup (?)	; Buffer valores
+Bufferfimfrac 	dw		100 dup (?)	; Buffer valores
+contbuffint		dw		0			; cont bufint
+contbufffrac	dw		0			; cont bufdec
+conttransint	dw		0			; cont bufint
+conttransfrac	dw		0			; cont bufdec
+statusfrac		db		0			; statusint
+statustabspa	db		0			;
+statstabesfrac	db		0			;
+fracinvaliddig	db		0			;
+statusinvalid	db		0			; se achou inv lin
+linhasvalidas	dw		0			; nmr linhas valida
+linhasvalidasm	dw		0			;
+contlinhasint	dw		0			;
+tempbuffint		dw		0			;
+tempbufffrac	dw		0			;
+contlinhasfrac	dw		0			;
+TempBuffer		dw		0			;buffer temporaria
+controlbufint	db		0			;
+contdoset		dw		0			;
+bufferintpoint	dw		0			;
+bufferfracpoint	dw		0			;
+stringsomaint	db		10	dup (?)	;
+stringsomafrac	db		10	dup (?)		;
+stringsomaint1	db		10	dup (?)	;
+stringsomafrac1	db		10	dup (?)		;
+somavalint32	dw		2	dup (?)		;
+somavalfrac32	dw		2	dup (?)		;
+somavalint32m	dw		2	dup (?)		;
+somavalfrac32m	dw		2	dup (?)		;
+somavaloresint1	dw		0			;
+somavaloresfrac1	dw		0			;
+somavaloresint	dw		0			;
+somavaloresfrac	dw		0			;
+arredonda		dw		0			;
+metadedalinha	db		0			;
+restomeialinha	db		0			;
+testearredonda  dw		0			;
+flagzerodireita	dw		0			;
+flagzerodireita1	dw		0			;
+fimdoprograma	dw		0			;
+chegou100lin	dw		0			;
+pontoentrada	dw		0			;
+posfinal		dw		0			;
+;somavaloresintteste		dw		760		;
+;somavaloresfracteste		dw		282		;
+contpontotxt	dw		0			;
+valoresint		dw		100 dup (0)	;
+valoresfrac		dw		100 dup (0)	;
+calculoint		dw		2			;
+tempcalculoint	dw		0			;
+calculofrac		dw		2			;
+tempcalculofrac	dw		0			;
+contintbuff		db		'0'			;
+linha0			db		'0'			;
+linha1			db		'0'			;
+linha2			db		'0'			;
+pfnumeroint		db		0			;
+pfnumerofrac	db		0			;
+Bufferlinfinal 	db		18 dup ('0') 	; Buffer linha
+sw_n			dw		0			;
+sw_f			db		0			;
+sw_m			dw		0			;
+MsgPedeArquivoSrc	db	"Nome do arquivo origem: ", 0
+MsgPedeArquivoDst	db	"Nome do arquivo destino: ", 0
+msgsoma				db	"Soma: ", 0
+msgmedia			db	"Media: ", 0
+MsgErroOpenFile		db	"Erro na abertura do arquivo.", CR, LF, 0
+MsgErroCreateFile	db	"Erro na criacao do arquivo.", CR, LF, 0
+MsgErroReadFile		db	"Erro na leitura do arquivo.", CR, LF, 0
+MsgErroWriteFile	db	"Erro na escrita do arquivo.", CR, LF, 0
+MsgCRLF				db	CR, LF, 0
+
+MAXSTRING	equ		15
+String	db		MAXSTRING dup (?)		; Usado na funcao gets
+
+	.code
+	.startup
+
+	call	GetFileNameSrc     ; Pega o nome do arquivoSRC
+	;lea		di,FileNameSrc
+	;mov		cx,15
+	;cld
+	;mov		al,'.'
+	;mov		pontoentrada,0
+;de_novo:
+	;repne	scasb
+	;jne     fimentradavir
+	;inc		pontoentrada
+	;jmp		de_novo
+;fimentradavir:
+	;cmp		pontoentrada,0
+	;jz		colocatxt	
+	
+;colocatxt:
+	
+	;lea		di,FileNameSrc
+	;mov		cx,15
+	;cld		
+	;mov		al,0dh
+	;mov		posfinal,0
+	;repne	scasb
+	;jne		fimanalisepos
+	;dec		di
+	;mov		posfinal,di
+;fimanalisepos:
+	;cmp		posfinal,10
+	;jbe		usaposfim
+	;mov		posfinal,10
+;usaposfim:
+	;mov		bx,posfinal
+	;mov		contpontotxt,bx
+	;mov		contpontotxt,9
+	;mov		bx,contpontotxt
+	;lea		bx,FileNameSrc[bx]
+	;mov		dl,'.'
+	;mov		byte ptr[bx],dl
+	;inc		contpontotxt
+	;mov		bx,contpontotxt
+	;lea		bx,FileNameSrc[bx]
+	;mov		dl,'t'
+	;mov		byte ptr[bx],dl
+	;inc		contpontotxt
+	;mov		bx,contpontotxt
+	;lea		bx,FileNameSrc[bx]
+	;mov		dl,'x'
+	;mov		byte ptr[bx],dl
+	;inc		contpontotxt
+	;mov		bx,contpontotxt
+	;lea		bx,FileNameSrc[bx]
+	;mov		dl,'t'
+	;mov		byte ptr[bx],dl
+	;inc		contpontotxt
+	;mov		bx,contpontotxt
+	;lea		bx,FileNameSrc[bx]
+	;mov		dl,0dh
+	;mov		byte ptr[bx],dl
+	;inc		contpontotxt
+	;mov		bx,contpontotxt
+	;lea		bx,FileNameSrc[bx]
+	;mov		dl,0ah
+	;;mov		byte ptr[bx],dl
+	
+	
+	;mov		statustabspa,1
+	;mov		bx,contbuffint
+	;lea		bx,Bufferlinhaint[bx]
+	;mov		dl,FileBuffer
+	;mov		byte ptr[bx],dl
+		
+	lea		dx,FileNameSrc
+	call		fopen
+	mov		FileHandleSrc,bx
+	jnc		Continua1
+	lea		bx, MsgErroOpenFile
+	call		printf_s
+	.exit	1
+Continua1:
+
+	
+
+	call		GetFileNameDst  ; Pega o nome do arquivoDST
+	lea		dx,FileNameDst
+	call		fcreate
+	mov		FileHandleDst,bx
+	jnc		Continua2
+	mov		bx,FileHandleSrc
+	call		fclose
+	lea		bx, MsgErroCreateFile
+	call		printf_s
+	.exit	1
+Continua2:
+
+	mov		bx,FileHandleSrc
+	call		getChar
+	jnc		Continua3
+	lea		bx, MsgErroReadFile
+	call		printf_s
+	mov		bx,FileHandleSrc
+	call		fclose
+	mov		bx,FileHandleDst
+	call		fclose
+	.exit	1
+
+Continua3:
+	cmp		chegou100lin,1
+	jz		calculasomatotal
+	cmp		ax,0
+	jz		TerminouArquivo1
+	jmp		analiseval
+	
+ligafim:
+	mov		fimdoprograma,1
+	mov		dl,0dh
+	mov		FileBuffer,dl
+	jmp		analiseval
+
+TerminouArquivo1:
+	cmp		fimdoprograma,0
+	jz		ligafim
+calculasomatotal:					;lembrar termiaar arquivo
+	
+	mov 	ax,somavaloresint
+	mov		somavaloresint1,ax
+	
+	mov 	ax,somavaloresfrac
+	mov		somavaloresfrac1,ax
+	
+	mov		ax,100
+	mul		somavaloresint
+	mov		somavalint32,ax
+	mov		somavalint32+2,dx
+	
+	mov		ax,1
+	mul		somavaloresfrac
+	mov		somavalfrac32,ax
+	mov		somavalfrac32+2,dx
+	
+	lea		bx,somavalint32
+	lea		si,somavalfrac32
+	
+	mov		ax,[bx]
+	add		ax,[si]
+	mov		[bx],ax
+	
+	mov		ax,[bx+2]
+	adc		ax,[si+2]
+	
+	mov		[bx+2],ax
+	
+	mov		bx,100
+	mov		ax,somavalint32
+	mov		dx,somavalint32+2
+	div		bx
+	mov		somavaloresint,ax
+	mov		somavaloresfrac,dx
+	
+	cmp		somavaloresfrac,10
+	jb		colocar0adireitafim
+	jmp		jatem0
+colocar0adireitafim:
+	mov		flagzerodireita,1
+jatem0:
+	mov		ax,somavaloresint
+	lea		bx,stringsomaint
+	call	sprintf_w
+	
+	mov		ax,somavaloresfrac
+	lea		bx,stringsomafrac
+	call	sprintf_w
+	
+calculamediatotal:
+	
+	mov		ax,100
+	mul		somavaloresint1
+	mov		somavalint32m,ax
+	mov		somavalint32m+2,dx
+	
+	mov		ax,1
+	mul		somavaloresfrac1
+	mov		somavalfrac32m,ax
+	mov		somavalfrac32m+2,dx
+	
+	lea		bx,somavalint32m
+	lea		si,somavalfrac32m
+	
+	mov		ax,[bx]
+	add		ax,[si]
+	mov		[bx],ax
+	
+	mov		ax,[bx+2]
+	adc		ax,[si+2]
+	
+	mov		[bx+2],ax
+	
+	mov		bx,linhasvalidas
+	mov		linhasvalidasm,bx
+	mov		bx,0
+ciclosomadivisor:
+	add		bx,100
+	dec		linhasvalidas
+	cmp		linhasvalidas,0
+	jz		fimsomadiv
+	jmp		ciclosomadivisor
+	
+fimsomadiv:
+	mov		ax,somavalint32m
+	mov		dx,somavalint32m+2
+	div		bx
+	mov		somavaloresint1,ax
+	mov		somavaloresfrac1,dx
+	
+	mov		ax,1
+	mul		somavaloresfrac1
+	mov		somavalfrac32m,ax
+	mov		somavalfrac32m+2,dx
+	
+	mov		bx,linhasvalidasm
+	mov		ax,somavalfrac32m
+	mov		dx,somavalfrac32m+2
+	div		bx
+	mov		somavaloresfrac1,ax
+	mov		arredonda,dx
+
+testearredondamento:
+	mov		bl,2
+	mov		ax,linhasvalidasm
+	div		bl
+	mov		metadedalinha,al
+	mov		restomeialinha,ah
+	
+	cmp		restomeialinha,1
+	jz		soma1metadelinha
+	jmp		arredondavar
+soma1metadelinha:
+	add		metadedalinha,1
+arredondavar:
+	
+	mov		al,1
+	mul		metadedalinha
+	mov		testearredonda,ax
+	
+	cmp		arredonda,ax
+	jae		arredondaovalorfim
+	jmp		fimtestesarredonda
+arredondaovalorfim:
+	inc		somavaloresfrac1
+fimtestesarredonda:
+	
+	cmp		somavaloresfrac1,10
+	jb		colocar0adireitafim1
+	jmp		jatem0f
+colocar0adireitafim1:
+	mov		flagzerodireita1,1
+jatem0f:
+		
+	mov		ax,somavaloresint1
+	lea		bx,stringsomaint1
+	call	sprintf_w
+	
+	mov		ax,somavaloresfrac1
+	lea		bx,stringsomafrac1
+	call	sprintf_w
+	
+	jmp		TerminouArquivo
+	
+analiseval:			
+	cmp		FileBuffer,9
+	jz		espacoetab
+	cmp		FileBuffer,20h
+	jz		espacoetab
+	cmp		FileBuffer,'.'
+	jz		ativastatusfrac
+	cmp		FileBuffer,','
+	jz		ativastatusfrac
+	cmp		FileBuffer,0dh
+	jz		FimdaLinha
+	cmp		FileBuffer,0ah
+	jz		FimdaLinha
+	cmp		FileBuffer,48
+	jb		caractereinvalido
+	cmp		FileBuffer,57
+	ja		caractereinvalido
+	cmp		statusfrac, 1
+	jz		Fracsbuffer
+	jmp		Inteirosbuffer
+	
+espacoetab:
+	cmp		statustabspa,1
+	jz		caractereinvalido
+	cmp		statstabesfrac,1
+	jz		ligastatusfrac
+	jmp		Continua2
+ligastatusfrac:
+	mov		statstabesfrac,0
+	mov		fracinvaliddig,1
+	jmp		Continua2
+	
+Inteirosbuffer:
+	mov		statustabspa,1
+	mov		bx,contbuffint
+	lea		bx,Bufferlinhaint[bx]
+	mov		dl,FileBuffer
+	mov		byte ptr[bx],dl
+	cmp		contbuffint,2
+	ja		caractereinvalido
+	inc		contbuffint
+	jmp		Continua2
+
+caractereinvalido:
+	mov		statusinvalid,1
+	jmp		Continua2
+	
+ativastatusfrac:
+	cmp		statusfrac,1
+	jz		caractereinvalido
+	mov		statusfrac,1
+	jmp		Continua2	
+
+Fracsbuffer:
+	cmp		fracinvaliddig,1
+	jz		caractereinvalido
+	mov		bx,contbufffrac
+	lea		bx,Bufferlinhafrac[bx]
+	mov		dl,FileBuffer
+	mov		byte ptr[bx],dl
+	cmp		contbufffrac,1
+	ja		caractereinvalido
+	inc		contbufffrac
+	cmp		contbufffrac,2
+	jz		desligafracin
+	cmp		contbufffrac,1
+	jz		desligastatus
+	jmp     Continua2
+desligastatus:
+	mov		statustabspa,0
+	mov		statstabesfrac,1
+	jmp     Continua2
+desligafracin:
+	mov		statstabesfrac,0
+	jmp     Continua2
+	
+FimdaLinha:
+	cmp	statusinvalid,1
+	jz	linhainvalida
+	cmp	contbuffint,0
+	jz	linhainvalida
+	cmp	statusfrac,0
+	jz	linhainvalida
+	cmp	contbufffrac,0
+	jz	linhainvalida
+	cmp	contbufffrac,1
+	jnz	calculaint
+ajustar0adireita:
+	mov		bx,contbufffrac
+	lea		bx,Bufferlinhafrac[bx]
+	mov		dl,'0'
+	mov		byte ptr[bx],dl
+	inc		contbufffrac
+calculaint:
+	cmp	contbuffint, 3
+	jz	tresnumeros
+	jmp	transformadecimalint
+	
+tresnumeros:
+	cmp	Bufferlinhaint,'4'
+	ja	linhainvalida
+	jmp	transformadecimalint
+	
+transformadecimalint:
+	mov		bx,contbuffint
+	mov		conttransint,bx
+	mov		bx,contbufffrac
+	mov		conttransfrac,bx
+	
+	mov		bx,conttransint
+	lea		bx,Bufferlinhaint[bx]
+	mov		dl,00h
+	mov		byte ptr[bx],dl
+	
+	lea		bx,Bufferlinhaint
+	call	atoi
+	mov		tempbuffint,0
+	add		tempbuffint,ax
+guardavalorit:
+	mov		bp,contlinhasint
+	lea		bp,valoresint[bp]
+	mov		cx,tempbuffint
+	mov		[bp],cx				;pode dar erro
+	add		contlinhasint,2
+	
+	mov		ax,tempbuffint
+	add		somavaloresint,ax	;faz a soma dos inteiros
+	
+	mov		ax,0
+	add		ax,tempbuffint
+	jnp		impar1
+	mov		pfnumeroint,0
+	jmp		tratahigh
+impar1:
+	mov		pfnumeroint,1
+tratahigh:
+	mov		cx,tempbuffint
+	mov		dl,0
+	add		dl,ch
+	jnp		impar2
+	mov		al,0
+	jmp		somaosdois
+impar2:
+	mov		al,1
+	jmp		somaosdois
+somaosdois:
+	add		pfnumeroint,al
+	cmp		pfnumeroint,0
+	jz		parpf
+	cmp		pfnumeroint,1
+	jz		imparpf
+	jmp		parpf
+	
+imparpf:
+	mov		pfnumeroint,'1'
+	jmp		analisepffrac
+	
+parpf:
+	mov		pfnumeroint,'0'
+	jmp		analisepffrac
+	
+analisepffrac:
+transformafrac:
+	mov		bx,conttransfrac
+	lea		bx,Bufferlinhafrac[bx]
+	mov		dl,00h
+	mov		byte ptr[bx],dl
+	
+	lea		bx,Bufferlinhafrac
+	call	atoi
+	mov		tempbufffrac,0
+	add		tempbufffrac,ax
+	
+guardavalorfrac:
+
+	mov		bp,contlinhasfrac
+	lea		bp,valoresfrac[bp]
+	mov		[bp],cx				;pode dar erro
+	add		contlinhasfrac,2
+	
+	mov		ax,tempbufffrac
+	add		somavaloresfrac,ax
+	
+	mov		ax,0
+	add		ax,tempbufffrac
+	jnp		imparfrac1
+	mov		pfnumerofrac,0
+	jmp		tratahighfrac
+imparfrac1:
+	mov		pfnumerofrac,1
+tratahighfrac:
+	mov		cx,tempbufffrac
+	mov		dl,0
+	add		dl,ch
+	jnp		impar2frac
+	mov		al,0
+	jmp		somaosdoisfrac
+impar2frac:
+	mov		al,1
+	jmp		somaosdoisfrac
+somaosdoisfrac:
+	add		pfnumerofrac,al
+	cmp		pfnumerofrac,0
+	jz		parpffrac
+	cmp		pfnumerofrac,1
+	jz		imparpffrac
+	jmp		parpffrac
+	
+imparpffrac:
+	mov		pfnumerofrac,'1'
+	jmp		analisepffracfim
+	
+parpffrac:
+	mov		pfnumerofrac,'0'
+	jmp		analisepffracfim
+
+analisepffracfim:
+	
+tratalinha:
+	inc	linhasvalidas
+	inc linha0
+	cmp	linha0,3Ah
+	jnz	fimtratalinha
+	mov	linha0,30h
+	inc	linha1
+	cmp	linha1,3Ah
+	jnz	fimtratalinha
+	mov	linha1,30h
+	inc	linha2
+	
+fimtratalinha:
+	jmp 	stchteste
+	
+linhainvalida:
+	jmp zerarvariaveis
+
+zerarvariaveis:
+	mov	fracinvaliddig,0
+	mov	statustabspa,0
+	mov	statstabesfrac,0
+	mov	statusinvalid,0
+	mov	contbuffint,0
+	mov	statusfrac,0
+	mov	contbufffrac,0
+	mov	contdoset,0
+	jmp	zerarvetores
+		
+zerarvetores:
+limpabufffrac:
+	mov		bx,contbufffrac
+	lea		bx,Bufferlinhafrac[bx]
+	mov		byte ptr[bx],0
+	mov		contbufffrac,0
+	
+limpabuffint:
+	mov		bx,contbuffint
+	lea		bx,Bufferlinhaint[bx]
+	mov		byte ptr[bx],0
+	cmp		linhasvalidas,100
+	jz		chegou100linhas
+	jmp 		Continua2
+	
+chegou100linhas:
+	mov		chegou100lin,1
+	jmp		Continua2
+
+stchteste:
+	mov			contdoset,0
+	mov			dl,linha2
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	mov			dl,linha1
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	mov			dl,linha0
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	mov			dl,' '
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	mov			dl,'-'
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	mov			dl,' '
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	cmp			contbuffint,3
+	jz			loopset
+	cmp			contbuffint,2
+	jz			colocaespace
+	cmp			contbuffint,1
+	jz			coloca2espace
+	
+coloca2espace:
+	mov			dl,' '
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	
+colocaespace:
+	mov			dl,' '
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	jmp			loopset
+	
+loopset:
+	mov			bx,contdoset
+	lea			bx,Bufferlinhaint[bx]
+	mov			dl,byte ptr[bx]
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	dec			contbuffint
+	cmp			contbuffint,0
+	jz			colocavirgula
+	inc			contdoset
+	jmp			loopset
+
+colocavirgula:	
+	mov			contdoset,0
+	mov			dl,','
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+
+loopset2:
+	mov			bx,contdoset
+	lea			bx,Bufferlinhafrac[bx]
+	;mov			bufferfracpoint,bx
+	mov			dl,byte ptr[bx]
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	dec			contbufffrac
+	cmp			contbufffrac,0
+	jz			colocafim
+	inc			contdoset
+	jmp			loopset2
+
+colocafim:	
+	mov			dl,' '
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	mov			dl,'-'
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	mov			dl,' '
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	
+colocaparidadaset:
+	mov			dl,pfnumeroint
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	mov			dl,pfnumerofrac
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	
+;colocafim:
+	mov			contdoset,0
+	mov			dl,0dh
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	
+	jmp		linhainvalida
+	
+erroresc:
+
+	lea		bx, MsgErroWriteFile
+	call	printf_s
+	mov		bx,FileHandleSrc		; Fecha arquivo origem
+	call	fclose
+	mov		bx,FileHandleDst		; Fecha arquivo destino
+	call	fclose
+	.exit	1
+		
+TerminouArquivo:
+	mov			contdoset,0
+TerminouArquivo3:	
+	mov			bx,contdoset
+	lea			bx,msgsoma[bx]
+	mov			dl,byte ptr[bx]
+	cmp			dl,00h
+	jz			ciclodeprint
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	inc			contdoset
+	jmp			TerminouArquivo3
+	
+ciclodeprint:
+	mov			contdoset,0
+ciclodeprint4:	
+	mov			bx,contdoset
+	lea			bx,stringsomaint[bx]
+	mov			dl,byte ptr[bx]
+	cmp			dl,00h
+	jz			partefrac
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	inc			contdoset
+	jmp			ciclodeprint4
+	;stringsomafrac
+partefrac:
+	mov			contdoset,0
+	mov			dl,','
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	cmp			flagzerodireita,1
+	jz			colocazeronapos
+	jmp			partefrac1
+colocazeronapos:
+	mov			dl,'0'
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+
+partefrac1:	
+	mov			bx,contdoset
+	lea			bx,stringsomafrac[bx]
+	mov			dl,byte ptr[bx]
+	cmp			dl,00h
+	jz			partefracfim
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	inc			contdoset
+	jmp			partefrac1
+	
+partefracfim:
+
+	mov			contdoset,0
+	mov			dl,0dh
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	
+	mov			contdoset,0
+Medialoop:	
+	mov			bx,contdoset
+	lea			bx,msgmedia[bx]
+	mov			dl,byte ptr[bx]
+	cmp			dl,00h
+	jz			printmediafim
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	inc			contdoset
+	jmp			Medialoop
+	
+printmediafim:
+	mov			contdoset,0
+mediacicloint:	
+	mov			bx,contdoset
+	lea			bx,stringsomaint1[bx]
+	mov			dl,byte ptr[bx]
+	cmp			dl,00h
+	jz			partefracmedia
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	inc			contdoset
+	jmp			mediacicloint
+	
+partefracmedia:	
+	mov			contdoset,0
+	mov			dl,','
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	
+	cmp			flagzerodireita1,1
+	jz			colocazeronapos1
+	jmp			partefracmedia1
+colocazeronapos1:
+	mov			dl,'0'
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	
+partefracmedia1:	
+	mov			bx,contdoset
+	lea			bx,stringsomafrac1[bx]
+	mov			dl,byte ptr[bx]
+	cmp			dl,00h
+	jz			colocaocr
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+	inc			contdoset
+	jmp			partefracmedia1
+colocaocr:
+	mov			dl,0dh
+	mov			bx,FileHandleDst
+	call		setChar
+	jc			erroresc
+
+	mov		bx,FileHandleSrc	; Fecha arquivo origem
+	call	fclose
+	mov		bx,FileHandleDst	; Fecha arquivo destino
+	call	fclose
+	.exit	0
+
+;--------------------------------------------------------------------
+;Funcao Pede o nome do arquivo de origem salva-o em FileNameSrc
+;--------------------------------------------------------------------
+GetFileNameSrc	proc	near
+	;printf("Nome do arquivo origem: ")
+	lea		bx, MsgPedeArquivoSrc
+	call	printf_s
+
+	;gets(FileNameSrc);
+	lea		bx, FileNameSrc
+	call	gets
+	
+	;printf("\r\n")
+	lea		bx, MsgCRLF
+	call	printf_s
+	
+	ret
+GetFileNameSrc	endp
+
+
+;--------------------------------------------------------------------
+;Funcao Pede o nome do arquivo de destino salva-o em FileNameDst
+;--------------------------------------------------------------------
+GetFileNameDst	proc	near
+	;printf("Nome do arquivo destino: ");
+	lea		bx, MsgPedeArquivoDst
+	call	printf_s
+	
+	;gets(FileNameDst);
+	lea		bx, FileNameDst
+	call	gets
+	
+	;printf("\r\n")
+	lea		bx, MsgCRLF
+	call	printf_s
+	
+	ret
+GetFileNameDst	endp
+
+;--------------------------------------------------------------------
+;Função	Abre o arquivo cujo nome está no string apontado por DX
+;		boolean fopen(char *FileName -> DX)
+;Entra: DX -> ponteiro para o string com o nome do arquivo
+;Sai:   BX -> handle do arquivo
+;       CF -> 0, se OK
+;--------------------------------------------------------------------
+fopen	proc	near
+	mov		al,0
+	mov		ah,3dh
+	int		21h
+	mov		bx,ax
+	ret
+fopen	endp
+
+;--------------------------------------------------------------------
+;Função Cria o arquivo cujo nome está no string apontado por DX
+;		boolean fcreate(char *FileName -> DX)
+;Sai:   BX -> handle do arquivo
+;       CF -> 0, se OK
+;--------------------------------------------------------------------
+fcreate	proc	near
+	mov		cx,0
+	mov		ah,3ch
+	int		21h
+	mov		bx,ax
+	ret
+fcreate	endp
+
+;--------------------------------------------------------------------
+;Entra:	BX -> file handle
+;Sai:	CF -> "0" se OK
+;--------------------------------------------------------------------
+fclose	proc	near
+	mov		ah,3eh
+	int		21h
+	ret
+fclose	endp
+
+;--------------------------------------------------------------------
+;Função	Le um caractere do arquivo identificado pelo HANLDE BX
+;		getChar(handle->BX)
+;Entra: BX -> file handle
+;Sai:   dl -> caractere
+;		AX -> numero de caracteres lidos
+;		CF -> "0" se leitura ok
+;--------------------------------------------------------------------
+getChar	proc	near
+	mov		ah,3fh
+	mov		cx,1
+	lea		dx,FileBuffer
+	int		21h
+	;mov		dl,FileBuffer
+	ret
+getChar	endp
+		
+;--------------------------------------------------------------------
+;Entra: BX -> file handle
+;       dl -> caractere
+;Sai:   AX -> numero de caracteres escritos
+;		CF -> "0" se escrita ok
+;--------------------------------------------------------------------
+setChar	proc	near
+	mov		ah,40h
+	mov		cx,1
+	mov		FileBuffer,dl
+	lea		dx,FileBuffer
+	int		21h
+	ret
+setChar	endp	
+
+;
+;--------------------------------------------------------------------
+;Funcao Le um string do teclado e coloca no buffer apontado por BX
+;		gets(char *s -> bx)
+;--------------------------------------------------------------------
+gets	proc	near
+	push	bx
+
+	mov		ah,0ah						; Lê uma linha do teclado
+	lea		dx,String
+	mov		byte ptr String, MAXSTRING-4	; 2 caracteres no inicio e um eventual CR LF no final
+	int		21h
+
+	lea		si,String+2					; Copia do buffer de teclado para o FileName
+	pop		di
+	mov		cl,String+1
+	mov		ch,0
+	mov		ax,ds						; Ajusta ES=DS para poder usar o MOVSB
+	mov		es,ax
+	rep 	movsb
+
+	mov		byte ptr es:[di],0			; Coloca marca de fim de string
+	ret
+gets	endp
+
+;====================================================================
+; A partir daqui, estão as funções já desenvolvidas
+;	1) printf_s
+;====================================================================
+	
+;--------------------------------------------------------------------
+;Função Escrever um string na tela
+;		printf_s(char *s -> BX)
+;--------------------------------------------------------------------
+printf_s	proc	near
+	mov		dl,[bx]
+	cmp		dl,0
+	je		ps_1
+
+	push	bx
+	mov		ah,2
+	int		21H
+	pop		bx
+
+	inc		bx		
+	jmp		printf_s
+		
+ps_1:
+	ret
+printf_s	endp
+
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+;
+;
+;--------------------------------------------------------------------
+;Função: Converte um inteiro (n) para (string)
+;		 sprintf(string, "%d", n)
+;
+;void sprintf_w(char *string->BX, WORD n->AX) {
+;	k=5;
+;	m=10000;
+;	f=0;
+;	do {
+;		quociente = n / m : resto = n % m;	// Usar instrução DIV
+;		if (quociente || f) {
+;			*string++ = quociente+'0'
+;			f = 1;
+;		}
+;		n = resto;
+;		m = m/10;
+;		--k;
+;	} while(k);
+;
+;	if (!f)
+;		*string++ = '0';
+;	*string = '\0';
+;}
+;
+;Associação de variaveis com registradores e memória
+;	string	-> bx
+;	k		-> cx
+;	m		-> sw_m dw
+;	f		-> sw_f db
+;	n		-> sw_n	dw
+;--------------------------------------------------------------------
+
+sprintf_w	proc	near
+
+;void sprintf_w(char *string, WORD n) {
+	mov		sw_n,ax
+
+;	k=5;
+	mov		cx,5
+	
+;	m=10000;
+	mov		sw_m,10000
+	
+;	f=0;
+	mov		sw_f,0
+	
+;	do {
+sw_do:
+
+;		quociente = n / m : resto = n % m;	// Usar instrução DIV
+	mov		dx,0
+	mov		ax,sw_n
+	div		sw_m
+	
+;		if (quociente || f) {
+;			*string++ = quociente+'0'
+;			f = 1;
+;		}
+	cmp		al,0
+	jne		sw_store
+	cmp		sw_f,0
+	je		sw_continue
+sw_store:
+	add		al,'0'
+	mov		[bx],al
+	inc		bx
+	
+	mov		sw_f,1
+sw_continue:
+	
+;		n = resto;
+	mov		sw_n,dx
+	
+;		m = m/10;
+	mov		dx,0
+	mov		ax,sw_m
+	mov		bp,10
+	div		bp
+	mov		sw_m,ax
+	
+;		--k;
+	dec		cx
+	
+;	} while(k);
+	cmp		cx,0
+	jnz		sw_do
+
+;	if (!f)
+;		*string++ = '0';
+	cmp		sw_f,0
+	jnz		sw_continua2
+	mov		[bx],'0'
+	inc		bx
+sw_continua2:
+
+
+;	*string = '\0';
+	mov		byte ptr[bx],0
+		
+;}
+	ret
+		
+sprintf_w	endp
+
+;
+;--------------------------------------------------------------------
+;Função:Converte um ASCII-DECIMAL para HEXA
+;Entra: (S) -> DS:BX -> Ponteiro para o string de origem
+;Sai:	(A) -> AX -> Valor "Hex" resultante
+;Algoritmo:
+;	A = 0;
+;	while (*S!='\0') {
+;		A = 10 * A + (*S - '0')
+;		++S;
+;	}
+;	return
+;--------------------------------------------------------------------
+atoi	proc near
+
+		; A = 0;
+		mov		ax,0
+		
+atoi_2:
+		; while (*S!='\0') {
+		cmp		byte ptr[bx], 0
+		jz		atoi_1
+
+		; 	A = 10 * A
+		mov		cx,10
+		mul		cx
+
+		; 	A = A + *S
+		mov		ch,0
+		mov		cl,[bx]
+		add		ax,cx
+
+		; 	A = A - '0'
+		sub		ax,'0'
+
+		; 	++S
+		inc		bx
+		
+		;}
+		jmp		atoi_2
+
+atoi_1:
+		; return
+		ret
+
+atoi	endp
+
+;--------------------------------------------------------------------
+		end
+;--------------------------------------------------------------------
